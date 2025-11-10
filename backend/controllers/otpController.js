@@ -1,25 +1,12 @@
-import "../config/env.js";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
+import dotenv from "dotenv";
 import User from "../models/User.js";
 
-// Generate random 6-digit OTP
+dotenv.config();
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
-
-console.log("📧 Email user loaded:", process.env.EMAIL_USER);
-
-// ✅ Gmail SMTP Configuration (secure + compatible)
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // true for port 465
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
 
 // ---- SEND OTP ----
 export const sendOTP = async (req, res) => {
@@ -38,32 +25,31 @@ export const sendOTP = async (req, res) => {
     user.verified = false;
     await user.save();
 
-    // ✉️ Send OTP Email
-    const mailOptions = {
-      from: `"Exam System" <${process.env.EMAIL_USER}>`,
+    // ✅ Send OTP using Resend
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM,
       to: email,
       subject: "Your Exam Login OTP",
       html: `
-        <div style="font-family:sans-serif;">
-          <h2>Hello ${name},</h2>
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <h2>Hi ${name || "User"},</h2>
           <p>Your OTP for exam login is:</p>
-          <h1 style="color:#4F46E5;">${otp}</h1>
-          <p>This OTP will expire in 5 minutes.</p>
+          <h1 style="color:#4f46e5;">${otp}</h1>
+          <p>This OTP is valid for 5 minutes.</p>
+          <br/>
+          <p>Best regards,<br/>Exam System</p>
         </div>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("✅ OTP email sent:", info.response);
-
-    res.json({ message: "OTP sent successfully" });
+    res.json({ message: "✅ OTP sent successfully to email" });
   } catch (error) {
     console.error("❌ OTP send error:", error);
-    res.status(500).json({ message: "Failed to send OTP. Check your email or network connection." });
+    res.status(500).json({ message: "Failed to send OTP", error: error.message });
   }
 };
 
-
+// ---- VERIFY OTP ----
 export const verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -79,9 +65,9 @@ export const verifyOTP = async (req, res) => {
     user.otpExpiry = null;
     await user.save();
 
-    res.json({ message: "OTP verified successfully", user });
+    res.json({ message: "✅ OTP verified successfully", user });
   } catch (error) {
-    console.error("OTP verify error:", error);
+    console.error("❌ OTP verify error:", error);
     res.status(500).json({ message: "Verification failed" });
   }
 };
