@@ -15,7 +15,8 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://online-exam-frontend-6yihodedm-mohamed-anas-cs-projects.vercel.app"
+  "https://online-exam-frontend-6yihodedm-mohamed-anas-cs-projects.vercel.app",
+  "*"
 ];
 
 // ✅ FIXED — Always handle OPTIONS preflight
