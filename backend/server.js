@@ -1,10 +1,19 @@
+import dotenv from "dotenv";
+dotenv.config(); // ✅ must come first
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
-import otpRoutes from "./routes/otpRoutes.js"; // your OTP routes file
+import otpRoutes from "./routes/otpRoutes.js";
+import examRoutes from "./routes/examRoutes.js";
+import questionRoutes from "./routes/questionRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import resultRoutes from "./routes/resultRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 
-dotenv.config();
+
+
+
 const app = express();
 
 app.use(express.json());
@@ -18,6 +27,13 @@ app.use(cors({
 
 // routes
 app.use("/api/otp", otpRoutes);
+app.use("/api/exam", examRoutes); 
+app.use("/api/questions", questionRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/result", resultRoutes);
+app.use("/api/admin", analyticsRoutes);
+
+
 
 app.get("/", (req, res) => {
   res.send("Backend is running...");

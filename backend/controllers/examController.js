@@ -1,4 +1,4 @@
-import Question from "../models/Question.js";
+import Question from "../models/questionText.js";
 import Result from "../models/Result.js";
 import User from "../models/User.js";
 

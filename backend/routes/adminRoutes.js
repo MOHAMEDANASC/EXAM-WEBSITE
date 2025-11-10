@@ -1,54 +1,147 @@
 import express from "express";
-import Question from "../models/Question.js";
+import Result from "../models/Result.js";
+import User from "../models/User.js";
+import Question from "../models/questionText.js";
 
 const router = express.Router();
 
-// Simple admin password (you can later replace with JWT auth)
-const ADMIN_PASSWORD = "examadmin123";
-
-// Middleware for basic admin protection
-const verifyAdmin = (req, res, next) => {
-  const { adminPassword } = req.headers;
-  if (adminPassword !== ADMIN_PASSWORD) {
-    return res.status(401).json({ message: "Unauthorized" });
+// 🧠 Helper function
+const checkAdmin = (req, res, next) => {
+  const adminPassword = req.headers["adminpassword"];
+  if (adminPassword !== "examadmin123") {
+    return res.status(401).json({ message: "Unauthorized access" });
   }
   next();
 };
 
-// Get all questions
-router.get("/questions", verifyAdmin, async (req, res) => {
-  const questions = await Question.find();
-  res.json(questions);
+// ✅ Admin Stats
+router.get("/stats", checkAdmin, async (req, res) => {
+  try {
+    const totalQuestions = await Question.countDocuments();
+    const totalStudents = await User.countDocuments({ verified: true });
+    const results = await Result.find();
+
+    const avgScore =
+      results.length > 0
+        ? (results.reduce((sum, r) => sum + (r.score || 0), 0) / results.length).toFixed(2)
+        : 0;
+
+    res.json({
+      totalQuestions,
+      totalStudents,
+      avgScore,
+      activeExams: results.length,
+    });
+  } catch (error) {
+    console.error("Admin stats error:", error);
+    res.status(500).json({ message: "Failed to load admin stats" });
+  }
 });
 
-// Add new question
-router.post("/questions", verifyAdmin, async (req, res) => {
-  const { questionText, options, correctAnswer } = req.body;
-  if (!questionText || options.length !== 4 || !correctAnswer)
-    return res.status(400).json({ message: "Invalid question data" });
-
-  const newQuestion = new Question({ questionText, options, correctAnswer });
-  await newQuestion.save();
-  res.json({ message: "Question added successfully", newQuestion });
+// ✅ Leaderboard
+router.get("/leaderboard", checkAdmin, async (req, res) => {
+  try {
+    const leaderboard = await Result.find()
+      .populate("userId", "name email phone")
+      .sort({ score: -1 })
+      .limit(50);
+    res.json(leaderboard);
+  } catch (error) {
+    console.error("Leaderboard error:", error);
+    res.status(500).json({ message: "Failed to load leaderboard" });
+  }
 });
 
-// Edit question
-router.put("/questions/:id", verifyAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { questionText, options, correctAnswer } = req.body;
+// ✅ Analytics
+router.get("/analytics", checkAdmin, async (req, res) => {
+  try {
+    const results = await Result.find().populate("userId", "name email");
 
-  const updated = await Question.findByIdAndUpdate(
-    id,
-    { questionText, options, correctAnswer },
-    { new: true }
-  );
-  res.json({ message: "Question updated", updated });
+    if (!results.length) {
+      return res.json({
+        message: "No exam results found",
+        results: [],
+      });
+    }
+
+    const totalExams = results.length;
+    const totalStudents = new Set(results.map((r) => r.userId?._id?.toString())).size;
+    const avgScore = (
+      results.reduce((sum, r) => sum + (r.score || 0), 0) / totalExams
+    ).toFixed(2);
+    const highest = Math.max(...results.map((r) => r.score));
+    const lowest = Math.min(...results.map((r) => r.score));
+
+    const distribution = [
+      { range: "0-20%", count: results.filter(r => (r.score / r.totalMarks) * 100 <= 20).length },
+      { range: "21-40%", count: results.filter(r => (r.score / r.totalMarks) * 100 > 20 && (r.score / r.totalMarks) * 100 <= 40).length },
+      { range: "41-60%", count: results.filter(r => (r.score / r.totalMarks) * 100 > 40 && (r.score / r.totalMarks) * 100 <= 60).length },
+      { range: "61-80%", count: results.filter(r => (r.score / r.totalMarks) * 100 > 60 && (r.score / r.totalMarks) * 100 <= 80).length },
+      { range: "81-100%", count: results.filter(r => (r.score / r.totalMarks) * 100 > 80).length },
+    ];
+
+    res.json({
+      totalStudents,
+      totalExams,
+      avgScore,
+      highest,
+      lowest,
+      distribution,
+      results,
+    });
+  } catch (error) {
+    console.error("Analytics error:", error);
+    res.status(500).json({ message: "Failed to load analytics" });
+  }
 });
 
-// Delete question
-router.delete("/questions/:id", verifyAdmin, async (req, res) => {
-  await Question.findByIdAndDelete(req.params.id);
-  res.json({ message: "Question deleted" });
+// ✅ Question Stats (Real Data)
+router.get("/question-stats", checkAdmin, async (req, res) => {
+  try {
+    const questions = await Question.find();
+    const results = await Result.find();
+
+    if (!questions.length) {
+      return res.json({ message: "No questions found", data: [] });
+    }
+
+    // Build question-level analytics
+    const questionStats = questions.map((q) => {
+      let totalAttempts = 0;
+      let correctAttempts = 0;
+
+      results.forEach((r) => {
+        if (Array.isArray(r.answers)) {
+          r.answers.forEach((ans) => {
+            if (ans.questionId?.toString() === q._id.toString()) {
+              totalAttempts++;
+              if (ans.selectedOption === q.correctAnswer) correctAttempts++;
+            }
+          });
+        }
+      });
+
+      const accuracy =
+        totalAttempts > 0
+          ? ((correctAttempts / totalAttempts) * 100).toFixed(1)
+          : 0;
+
+      return {
+        id: q._id,
+        questionText: q.questionText,
+        totalAttempts,
+        correctAttempts,
+        accuracy: Number(accuracy),
+      };
+    });
+
+    res.json({ data: questionStats });
+  } catch (error) {
+    console.error("Question stats error:", error);
+    res.status(500).json({ message: "Failed to load question stats" });
+  }
 });
+
 
 export default router;
+
