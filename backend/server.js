@@ -13,12 +13,19 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 dotenv.config();
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://online-exam-frontend-5a6cmsg0d-mohamed-anas-cs-projects.vercel.app"
+];
+
 // ✅ FIXED CORS — allows frontend access
-app.use(cors({
-  origin: ["http://localhost:3000", "https://your-frontend-name.vercel.app"],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
