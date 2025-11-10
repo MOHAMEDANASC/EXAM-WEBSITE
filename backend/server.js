@@ -20,7 +20,7 @@ app.use(express.json());
 
 // ✅ FIX: Proper CORS setup
 app.use(cors({
-  origin: ["http://localhost:3000", "https://exam-frontend.vercel.app"], // update if hosted frontend
+  origin: "http://localhost:3000", // update if hosted frontend
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
