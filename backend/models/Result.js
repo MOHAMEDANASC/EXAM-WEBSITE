@@ -7,6 +7,7 @@ const resultSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    examId: { type: mongoose.Schema.Types.ObjectId, ref: "Exam" },
     correct: { type: Number, default: 0 },
     wrong: { type: Number, default: 0 },
     total: { type: Number, default: 0 },

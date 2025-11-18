@@ -14,29 +14,7 @@ const checkAdmin = (req, res, next) => {
   next();
 };
 
-// ✅ Admin Stats
-router.get("/stats", checkAdmin, async (req, res) => {
-  try {
-    const totalQuestions = await Question.countDocuments();
-    const totalStudents = await User.countDocuments({ verified: true });
-    const results = await Result.find();
 
-    const avgScore =
-      results.length > 0
-        ? (results.reduce((sum, r) => sum + (r.score || 0), 0) / results.length).toFixed(2)
-        : 0;
-
-    res.json({
-      totalQuestions,
-      totalStudents,
-      avgScore,
-      activeExams: results.length,
-    });
-  } catch (error) {
-    console.error("Admin stats error:", error);
-    res.status(500).json({ message: "Failed to load admin stats" });
-  }
-});
 
 // ✅ Leaderboard
 router.get("/leaderboard", checkAdmin, async (req, res) => {

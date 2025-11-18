@@ -1,3 +1,4 @@
+// server.js (updated)
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -15,26 +16,26 @@ const app = express();
 
 app.use(
   cors({
-    origin: "*",  // <-- Not inside an array
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "adminpassword", "AdminPassword"],
   })
 );
 
 app.use(express.json());
 
-// ✅ Connect DB
+// Connect DB
 connectDB();
 
-// ✅ Routes
+// Routes — NOTE: exam route base is "/api/exams" (plural)
 app.use("/api/otp", otpRoutes);
-app.use("/api/exam", examRoutes);
+app.use("/api/exams", examRoutes);       // <-- changed to plural to match frontend
 app.use("/api/result", resultRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
-// ✅ Test route
+// Test route
 app.get("/", (req, res) => {
   res.send("✅ Backend is running and CORS enabled");
 });

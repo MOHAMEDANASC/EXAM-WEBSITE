@@ -12,7 +12,11 @@ const checkAdmin = (req, res, next) => {
   next();
 };
 
-// ✅ Get all questions (public – for students)
+// =======================
+// PUBLIC ROUTES
+// =======================
+
+// Get all questions
 router.get("/", async (req, res) => {
   try {
     const questions = await Question.find();
@@ -23,27 +27,22 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Get all questions (admin – includes answers)
-router.get("/admin/all", checkAdmin, async (req, res) => {
-  try {
-    const questions = await Question.find();
-    res.json(questions);
-  } catch (error) {
-    console.error("Error fetching admin questions:", error);
-    res.status(500).json({ message: "Failed to fetch admin questions" });
-  }
-});
+// =======================
+// ADMIN ROUTES
+// =======================
 
-// ✅ Add new question (Admin only)
-router.post("/admin/questions", checkAdmin, async (req, res) => {
+// ⭐ ADD new question  (THIS WAS MISSING)
+router.post("/", checkAdmin, async (req, res) => {
   try {
     const { questionText, options, correctAnswer } = req.body;
+
     if (!questionText || !options || !correctAnswer) {
       return res.status(400).json({ message: "Missing fields" });
     }
 
     const newQuestion = new Question({ questionText, options, correctAnswer });
     await newQuestion.save();
+
     res.status(201).json({ newQuestion });
   } catch (error) {
     console.error("Error adding question:", error);
@@ -51,8 +50,8 @@ router.post("/admin/questions", checkAdmin, async (req, res) => {
   }
 });
 
-// ✅ Edit question (Admin only)
-router.put("/admin/questions/:id", checkAdmin, async (req, res) => {
+// Edit question
+router.put("/:id", checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { questionText, options, correctAnswer } = req.body;
@@ -74,11 +73,12 @@ router.put("/admin/questions/:id", checkAdmin, async (req, res) => {
   }
 });
 
-// ✅ Delete question (Admin only)
-router.delete("/admin/questions/:id", checkAdmin, async (req, res) => {
+// Delete question
+router.delete("/:id", checkAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await Question.findByIdAndDelete(id);
+
     if (!deleted) {
       return res.status(404).json({ message: "Question not found" });
     }
